@@ -1,5 +1,5 @@
 # Project TODO:
-- [ ] Training concept I
+- [x] Training concept I
 - [ ] DataLoader + Unit Tests
 - [ ] Training concept II
 - [ ] Recurrent Heads (adapt.) \[stateful recurrent ConvNets\]
