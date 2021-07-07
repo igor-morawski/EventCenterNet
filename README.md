@@ -1,6 +1,7 @@
 # Project TODO:
-- [ ] Training concept
+- [ ] Training concept I
 - [ ] DataLoader + Unit Tests
+- [ ] Training concept II
 - [ ] Recurrent Heads (adapt.) \[stateful recurrent ConvNets\]
 - [ ] Motion Trajectory Embedding Head
 - [ ] README
@@ -8,7 +9,7 @@
 ## Training concept
 1. Batch dim: \[B, T, C, H, W\]
 * Parameters: 1) frame number T, multi-channel representation 2) interval and 3) channel dim.
-2. Stateful training loader: batch N is a continuation of batch N-1 (temporally). 
+2. Stateful training-compliant data loader: batch N is a continuation of batch N-1 (temporally). 
 
 # vvv Old README vvv
 
