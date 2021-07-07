@@ -1,3 +1,17 @@
+# Project TODO:
+- [ ] Training concept
+- [ ] DataLoader + Unit Tests
+- [ ] Recurrent Heads (adapt.) \[stateful recurrent ConvNets\]
+- [ ] Motion Trajectory Embedding Head
+- [ ] README
+
+## Training concept
+1. Batch dim: \[B, T, C, H, W\]
+* Parameters: 1) frame number T, multi-channel representation 2) interval and 3) channel dim.
+2. Stateful training loader: batch N is a continuation of batch N-1 (temporally). 
+
+# vvv Old README vvv
+
 # Pytorch simple CenterNet-45
 
 If you are looking for another CenterNet, try [this](https://github.com/zzzxxxttt/pytorch_simple_CenterNet_47)!
