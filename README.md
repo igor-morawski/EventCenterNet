@@ -1,10 +1,11 @@
 # Project TODO:
 - [x] Training concept I
-- [ ] DataLoader + Unit Tests
+- [x] DataLoader + Unit Tests
 - [ ] Training concept II
 - [ ] Recurrent Heads (adapt.) \[stateful recurrent ConvNets\]
 - [ ] # XXX xywh or x1y1x2y2
 - [ ] Motion Trajectory Embedding Head
+- [ ] MultiGPU
 - [ ] README
 
 ## Training concept
