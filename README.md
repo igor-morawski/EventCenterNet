@@ -11,6 +11,34 @@
 * Parameters: 1) frame number T, multi-channel representation 2) interval and 3) channel dim.
 2. Stateful training-compliant data loader: batch N is a continuation of batch N-1 (temporally). 
 
+## Dataloader
+self.sample_frames = self.shortest_total_time//self.delta_t # total frames in each sample
+self.segment_n = self.sample_frames // self.frames_per_batch # number of segments in each sample
+
+### Numbering segments in the dataloader
+N = segment_n (segments per sample) = frames // frame_n_in_batch
+K = batch size 
+
+M = number of batches when seg_n = 0; M = floor(sample_n/batch_size) * N
+
+
+
+S{sample_idx}_{segment_idx}
+
+| B1    | B2    | ...   | BN    | BN+1       | ...   | BN+N       | ...   | BM+N             | 
+| ---   | ---   | ---   | ---   | ---        | ---   | ---        | ---   | ---              |
+| S1_1  | S1_2  | ...   | S1_N  | S(K+1)_1   | ...   | S(K+1)_N   | ...   | S((M-1)*K+1)_N   |
+| S2_1  | S2_2  | ...   | S2_N  | S(K+2)_1   | ...   | S(K+2)_N   | ...   | S((M-1)*K+2)_N   |
+| ...   | ...   | ...   | ...   | ...        | ...   | ...        | ...   | ...              |
+| SK_1  | SK_2  | ...   | SK_N  | S(K+K)_1   | ...   | S(K+K)_N   | ...   | S((M-1)*K+K)_N   |
+
+Dataset dimensions: \[K,M*N\] # batch_size x (number of batches * segment number) = batch_size x (number of samples//batch size * segment number)
+
+Indexing: 
+sample_idx(data_idx) = (data_idx // (BATCH_SIZE * SEGMENT_N)) * BATCH_SIZE + (data_idx % BATCH_SIZE)
+segment_idx(data_idx) = data_idx % (BATCH_SIZE * SEGMENT_N) // BATCH_SIZE
+
+
 # vvv Old README vvv
 
 # Pytorch simple CenterNet-45

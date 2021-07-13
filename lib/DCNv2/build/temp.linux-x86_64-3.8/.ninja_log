@@ -1,0 +1,5 @@
+# ninja log v5
+0	5643	1625659125106136798	/tmp2/igor/EV/EventCenterNet/lib/DCNv2/build/temp.linux-x86_64-3.8/tmp2/igor/EV/EventCenterNet/lib/DCNv2/src/cpu/dcn_v2_cpu.o	bc1c097df7b46263
+1	15781	1625659135234595075	/tmp2/igor/EV/EventCenterNet/lib/DCNv2/build/temp.linux-x86_64-3.8/tmp2/igor/EV/EventCenterNet/lib/DCNv2/src/cuda/dcn_v2_im2col_cuda.o	598cdfa922306bf3
+1	16108	1625659135558609735	/tmp2/igor/EV/EventCenterNet/lib/DCNv2/build/temp.linux-x86_64-3.8/tmp2/igor/EV/EventCenterNet/lib/DCNv2/src/cuda/dcn_v2_psroi_pooling_cuda.o	49079194549291df
+0	21682	1625659141134862016	/tmp2/igor/EV/EventCenterNet/lib/DCNv2/build/temp.linux-x86_64-3.8/tmp2/igor/EV/EventCenterNet/lib/DCNv2/src/vision.o	801917f05f46b1cf
