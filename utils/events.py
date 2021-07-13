@@ -63,6 +63,9 @@ def events_to_voxel(events, bins, height, width, device=torch.device('cuda:0')):
     t = torch.Tensor(events['t'].astype('long')).cpu().long()
     p = torch.Tensor(events['p'].astype('long')).cpu().long()
     
+    if not len(t):
+        assert all([not len(t), not len(x), not len(y), not len(p)])
+        return volume
     t_min = t.min()
     t_max = t.max()
     t_scaled = (t-t_min) * ((vol_size[0] // 2-1) / (t_max-t_min))

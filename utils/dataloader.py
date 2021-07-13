@@ -12,17 +12,17 @@ except ImportError:
 class CSVDataset(Dataset):
     """CSV dataset."""
 
-    def __init__(self, train_file, class_list, batch_size, data_root, transform=None, trim_to_shortest=True, delta_t=50000, frames_per_batch=5, bins=5):
+    def __init__(self, csv_file, class_list, batch_size, data_root, transform=None, trim_to_shortest=True, delta_t=50000, frames_per_batch=5, bins=5):
         """
         Args:
-            train_file (string): CSV file with training annotations
+            csv_file (string): CSV file with training annotations
             annotations (string): CSV file with class list
             test_file (string, optional): CSV file with testing annotations
             batch_size (int): nubmer of samples in each batch
         """
         assert batch_size > 0
         assert isinstance(batch_size, int)
-        self.train_file = train_file
+        self.csv_file = csv_file
         assert op.exists(data_root)
         self.data_root = data_root
         self.class_list = class_list
@@ -54,10 +54,10 @@ class CSVDataset(Dataset):
         
         # csv with events_path, video_path, total_time
         try:
-            with self._open_for_csv(self.train_file) as file:
+            with self._open_for_csv(self.csv_file) as file:
                 self.events_data = self._read_annotations(csv.reader(file, delimiter=','), self.classes)
         except ValueError as e:
-            raise(ValueError('invalid CSV annotations file: {}: {}'.format(self.train_file, e)))
+            raise(ValueError('invalid CSV annotations file: {}: {}'.format(self.csv_file, e)))
         self.event_names = list(self.events_data.keys())
         if self.trim_to_shortest:          
             self.shortest_total_time = min([data['total_time'] for data in self.events_data.values()])
@@ -115,11 +115,13 @@ class CSVDataset(Dataset):
     def __getitem__(self, idx):
         file_idx = (idx // (self.batch_size * self.segment_n)) * self.batch_size + (idx % self.batch_size)
         segment_idx = idx % (self.batch_size * self.segment_n) // self.batch_size
-        event = self.load_events(file_idx, segment_idx)
-        annot = self.load_annotations(file_idx, segment_idx)
+        event, event_time_info = self.load_events(file_idx, segment_idx, return_time_info=True)
+        annot, annot_time_info = self.load_annotations(file_idx, segment_idx, return_time_info=True)
+        assert event_time_info == annot_time_info
         first_segment = True if not segment_idx else False
         last_segment = True if segment_idx == self.segment_n - 1 else False
-        info = { "first_segment" : first_segment, "last_segment" : last_segment } # XXX
+        info = { "first_segment" : first_segment, "last_segment" : last_segment,
+        "time_info" : event_time_info} # XXX
         file_path = self.event_names[file_idx]
         sample = {'event': event, 'annot': annot, 'info' : info, 'file_path' : file_path}
         if self.transform:
@@ -127,22 +129,32 @@ class CSVDataset(Dataset):
             sample = self.transform(sample)
         return sample
 
-    def load_events(self, file_idx, segment_idx):
+    def load_events(self, file_idx, segment_idx, return_time_info=False):
         video = ev.PSEELoader(self.event_names[file_idx])
         events = []
+        if return_time_info:
+            time_info = {"t0": [], "delta_t": self.delta_t}
         for frame_idx in range(self.frames_per_batch):
             t0 = (segment_idx * self.frames_per_batch * self.delta_t) + (frame_idx*self.delta_t)
+            if return_time_info:
+                time_info["t0"].append(t0)
             event = ev.video_segment_to_voxel(video, t0, self.delta_t, bins=self.bins)
             events.append(event)
         segment = torch.stack(events) # F, C, H, W
+        if return_time_info:
+            return segment, time_info
         return segment
 
-    def load_annotations(self, file_idx, segment_idx):  # here
+    def load_annotations(self, file_idx, segment_idx, return_time_info=False):  # here
         anno = ev.PSEELoader(self.events_data[self.event_names[file_idx]]['anno_file'])
         annotations_for_frames = []
+        if return_time_info:
+            time_info = {"t0": [], "delta_t": self.delta_t}
         for frame_idx in range(self.frames_per_batch):
             annotations = np.zeros((0, 5))
             t0 = (segment_idx * self.frames_per_batch * self.delta_t) + (frame_idx*self.delta_t)
+            if return_time_info:
+                time_info["t0"].append(t0)
             for bbox_info in ev.video_segment_anno_to_bboxes(anno, t0, self.delta_t):
                 x, y, w, h, class_id  = bbox_info['x'], bbox_info['y'], bbox_info['w'], bbox_info['h'], bbox_info['class_id']
                 annotation  = np.zeros((1, 5))
@@ -161,6 +173,8 @@ class CSVDataset(Dataset):
             # print("sum:",annotations)       
             annotations_for_frames.append(annotations)
         # print("frames:",annotations_for_frames)       
+        if return_time_info:
+            return annotations_for_frames, time_info
         return annotations_for_frames
 
     def _read_annotations(self, csv_reader, classes):
@@ -201,12 +215,12 @@ class CSVDataset(Dataset):
 
 def collater(data):
 
-    events = [s['event'] for s in data]
+    events = torch.stack([s['event'] for s in data])
     annots = [s['annot'] for s in data]
     infos = [s['info'] for s in data]
     file_paths = [s['file_path'] for s in data]
 
     # XXX
 
-    return {'event': events, 'annot': annots, 'info': infos, 'file_paths': file_path}
+    return {'event': events, 'annot': annots, 'info': infos, 'file_path': file_paths}
 
