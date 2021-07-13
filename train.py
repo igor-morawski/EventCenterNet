@@ -2,6 +2,7 @@ import os
 import sys
 import time
 import argparse
+import copy 
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'lib'))
 
@@ -13,18 +14,16 @@ import numpy as np
 import torch.nn as nn
 import torch.utils.data
 import torch.distributed as dist
-
-from datasets.coco import COCO, COCO_eval
-from datasets.pascal import PascalVOC, PascalVOC_eval
-
 from nets.hourglass import get_hourglass
 from nets.resdcn import get_pose_net
 
 from utils.utils import _tranpose_and_gather_feature, load_model
-from utils.image import transform_preds
+# from utils.image import transform_preds
 from utils.losses import _neg_loss, _reg_loss
 from utils.summary import create_summary, create_logger, create_saver, DisablePrint
 from utils.post_process import ctdet_decode
+
+from utils.dataloader import CSVDataset, collater
 
 # Training settings
 parser = argparse.ArgumentParser(description='simple_centernet45')
@@ -33,14 +32,22 @@ parser.add_argument('--local_rank', type=int, default=0)
 parser.add_argument('--dist', action='store_true')
 
 parser.add_argument('--root_dir', type=str, default='./')
-parser.add_argument('--data_dir', type=str, default='./data')
+parser.add_argument('--data_dir', type=str, default="/tmp2/igor/EV/Dataset/Automotive/")
 parser.add_argument('--log_name', type=str, default='test')
 parser.add_argument('--pretrain_name', type=str, default='pretrain')
 
-parser.add_argument('--dataset', type=str, default='coco', choices=['coco', 'pascal'])
+parser.add_argument('--dataset', type=str, default='CSVDataset', choices=['CSVDataset'])
+parser.add_argument('--train_csv_file', type=str)
+parser.add_argument('--val_csv_file', type=str)
+parser.add_argument('--class_list_file', type=str)
+parser.add_argument('--trim_to_shortest', action="store_true")
+parser.add_argument('--delta_t', type=int)
+parser.add_argument('--frames_per_batch', type=int)
+parser.add_argument('--bins', type=int)
 parser.add_argument('--arch', type=str, default='large_hourglass')
 
-parser.add_argument('--img_size', type=int, default=512)
+parser.add_argument('--img_h', type=int, default=240)
+parser.add_argument('--img_w', type=int, default=304)
 parser.add_argument('--split_ratio', type=float, default=1.0)
 
 parser.add_argument('--lr', type=float, default=5e-4)
@@ -48,7 +55,7 @@ parser.add_argument('--lr_step', type=str, default='90,120')
 parser.add_argument('--batch_size', type=int, default=48)
 parser.add_argument('--num_epochs', type=int, default=140)
 
-parser.add_argument('--test_topk', type=int, default=100)
+# parser.add_argument('--test_topk', type=int, default=100)
 
 parser.add_argument('--log_interval', type=int, default=100)
 parser.add_argument('--val_interval', type=int, default=5)
@@ -78,8 +85,9 @@ def main():
   torch.manual_seed(317)
   torch.backends.cudnn.benchmark = True  # disable this if OOM at beginning of training
 
-  num_gpus = torch.cuda.device_count()
+  num_gpus = torch.cuda.device_count() 
   if cfg.dist:
+    raise NotImplementedError
     cfg.device = torch.device('cuda:%d' % cfg.local_rank)
     torch.cuda.set_device(cfg.local_rank)
     dist.init_process_group(backend='nccl', init_method='env://',
@@ -88,26 +96,25 @@ def main():
     cfg.device = torch.device('cuda')
 
   print('Setting up data...')
-  Dataset = COCO if cfg.dataset == 'coco' else PascalVOC
-  train_dataset = Dataset(cfg.data_dir, 'train', split_ratio=cfg.split_ratio, img_size=cfg.img_size)
-  train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset,
-                                                                  num_replicas=num_gpus,
-                                                                  rank=cfg.local_rank)
-  train_loader = torch.utils.data.DataLoader(train_dataset,
-                                             batch_size=cfg.batch_size // num_gpus
-                                             if cfg.dist else cfg.batch_size,
-                                             shuffle=not cfg.dist,
-                                             num_workers=cfg.num_workers,
-                                             pin_memory=True,
-                                             drop_last=True,
-                                             sampler=train_sampler if cfg.dist else None)
+  if cfg.dataset == "CSVDataset":
+    Dataset = CSVDataset 
+    train_cfg = {"csv_file": cfg.train_csv_file, "class_list": cfg.class_list_file,
+               "batch_size": cfg.batch_size, "data_root": cfg.data_dir,
+               "trim_to_shortest": cfg.trim_to_shortest, "delta_t": cfg.delta_t, 
+               "frames_per_batch": cfg.frames_per_batch, "bins": cfg.bins}
+    val_cfg = copy.deepcopy(train_cfg)
+    val_cfg["csv_file"] = cfg.val_csv_file
+  else:
+    raise NotImplementedError
+  train_dataset = Dataset(**train_cfg)
+  # train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset,
+  #                                                                 num_replicas=num_gpus,
+  #                                                                 rank=cfg.local_rank)
+  # XXX
+  train_loader = torch.utils.data.DataLoader(train_dataset, shuffle=False)
 
-  Dataset_eval = COCO_eval if cfg.dataset == 'coco' else PascalVOC_eval
-  val_dataset = Dataset_eval(cfg.data_dir, 'val', test_scales=[1.], test_flip=False)
-  val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=1,
-                                           shuffle=False, num_workers=1, pin_memory=True,
-                                           collate_fn=val_dataset.collate_fn)
-
+  val_dataset = Dataset(**val_cfg)
+  val_loader = torch.utils.data.DataLoader(val_dataset, shuffle=False)
   print('Creating model...')
   if 'hourglass' in cfg.arch:
     model = get_hourglass[cfg.arch]
@@ -127,6 +134,7 @@ def main():
 
   if os.path.isfile(cfg.pretrain_dir):
     model = load_model(model, cfg.pretrain_dir)
+  exit()
 
   optimizer = torch.optim.Adam(model.parameters(), cfg.lr)
   lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, cfg.lr_step, gamma=0.1)
