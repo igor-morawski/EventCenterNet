@@ -32,10 +32,10 @@ def evaluate_detection(gt_boxes_list, dt_boxes_list, classes=("car", "pedestrian
     for gt_boxes, dt_boxes in zip(gt_boxes_list, dt_boxes_list):
         
         print(gt_boxes.dtype)
-        assert np.all(gt_boxes['t'][1:] >= gt_boxes['t'][:-1])
-        assert np.all(dt_boxes['t'][1:] >= dt_boxes['t'][:-1])
+        assert np.all(gt_boxes['ts'][1:] >= gt_boxes['ts'][:-1])
+        assert np.all(dt_boxes['ts'][1:] >= dt_boxes['ts'][:-1])
 
-        all_ts = np.unique(gt_boxes['t'])
+        all_ts = np.unique(gt_boxes['ts'])
         n_steps = len(all_ts)
 
         gt_win, dt_win = _match_times(all_ts, gt_boxes, dt_boxes, time_tol)
@@ -60,21 +60,21 @@ def _match_times(all_ts, gt_boxes, dt_boxes, time_tol):
     low_dt, high_dt = 0, 0
     for ts in all_ts:
 
-        while low_gt < gt_size and gt_boxes[low_gt]['t'] < ts:
+        while low_gt < gt_size and gt_boxes[low_gt]['ts'] < ts:
             low_gt += 1
         # the high index is at least as big as the low one
         high_gt = max(low_gt, high_gt)
-        while high_gt < gt_size and gt_boxes[high_gt]['t'] <= ts:
+        while high_gt < gt_size and gt_boxes[high_gt]['ts'] <= ts:
             high_gt += 1
 
         # detection are allowed to be inside a window around the right detection timestamp
         low = ts - time_tol
         high = ts + time_tol
-        while low_dt < dt_size and dt_boxes[low_dt]['t'] < low:
+        while low_dt < dt_size and dt_boxes[low_dt]['ts'] < low:
             low_dt += 1
         # the high index is at least as big as the low one
         high_dt = max(low_dt, high_dt)
-        while high_dt < dt_size and dt_boxes[high_dt]['t'] <= high:
+        while high_dt < dt_size and dt_boxes[high_dt]['ts'] <= high:
             high_dt += 1
 
         windowed_gt.append(gt_boxes[low_gt:high_gt])
