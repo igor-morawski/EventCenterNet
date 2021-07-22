@@ -28,6 +28,12 @@ def _neg_loss_slow(preds, targets):
       loss = loss - (pos_loss + neg_loss) / num_pos
   return loss
 
+def _neg_loss_t(preds_t, targets_t):
+  s = []
+  for pred_t in preds_t:
+    for p, t in zip(pred_t, targets_t):
+      s.append(_neg_loss([p,], t))
+  return sum(s)
 
 def _neg_loss(preds, targets):
   ''' Modified focal loss. Exactly the same as CornerNet.
@@ -56,6 +62,15 @@ def _neg_loss(preds, targets):
     else:
       loss = loss - (pos_loss + neg_loss) / num_pos
   return loss / len(preds)
+
+
+def _reg_loss_t(regs_t, gt_regs_t, mask_t):
+  s = []
+  for reg_t in regs_t:
+    for r, g, m in zip(reg_t, gt_regs_t, mask_t):
+      s.append(_reg_loss([r,],g,m))
+  return sum(s)
+
 
 
 def _reg_loss(regs, gt_regs, mask):

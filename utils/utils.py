@@ -3,6 +3,32 @@ import torch.nn as nn
 from collections import OrderedDict
 
 
+def _gather_feature_t(feat, ind, mask=None):
+  dim = feat.size(2)
+  ind = ind.unsqueeze(2).expand(ind.size(0), ind.size(1), dim)
+  feat = feat.gather(1, ind)
+  if mask is not None:
+    mask = mask.unsqueeze(2).expand_as(feat)
+    feat = feat[mask]
+    feat = feat.view(-1, dim)
+  return feat
+
+
+def _tranpose_and_gather_feature_t(feat_tb, ind_t, batch_first=False):
+  result = []
+  if batch_first:
+    feat_t = feat_tb.transpose(0,1)
+  else:
+    feat_t = feat_tb
+  for feat, ind in zip(feat_t, ind_t):
+    feat = feat.permute(0, 2, 3, 1).contiguous()
+    feat = feat.view(feat.size(0), -1, feat.size(3))
+    feat = _gather_feature_t(feat, ind)
+    result.append(feat)
+    # B, MAX, 2
+  return result
+
+
 def _gather_feature(feat, ind, mask=None):
   dim = feat.size(2)
   ind = ind.unsqueeze(2).expand(ind.size(0), ind.size(1), dim)
@@ -19,7 +45,6 @@ def _tranpose_and_gather_feature(feat, ind):
   feat = feat.view(feat.size(0), -1, feat.size(3))
   feat = _gather_feature(feat, ind)
   return feat
-
 
 def flip_tensor(x):
   return torch.flip(x, [3])

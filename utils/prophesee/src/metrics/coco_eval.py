@@ -30,7 +30,8 @@ def evaluate_detection(gt_boxes_list, dt_boxes_list, classes=("car", "pedestrian
     flattened_gt = []
     flattened_dt = []
     for gt_boxes, dt_boxes in zip(gt_boxes_list, dt_boxes_list):
-
+        
+        print(gt_boxes.dtype)
         assert np.all(gt_boxes['t'][1:] >= gt_boxes['t'][:-1])
         assert np.all(dt_boxes['t'][1:] >= dt_boxes['t'][:-1])
 

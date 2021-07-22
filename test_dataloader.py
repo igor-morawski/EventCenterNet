@@ -25,13 +25,23 @@ DATA_ROOT = "/tmp2/igor/EV/Dataset/Automotive/"
 INIT_KWARGS = {"csv_file": TEST_ANN_CSV, "class_list": TEST_CLS_CSV,
                "batch_size": BATCH_SIZE, "data_root": DATA_ROOT,
                "trim_to_shortest": True, "delta_t": DELTA_T, "frames_per_batch": FRAMES_PER_BATCH,
-               "bins": BINS}
+               "bins": BINS, "hw": (H, W), "pad":False}
+VAL_INIT_KWARGS = copy.deepcopy(INIT_KWARGS)
+VAL_INIT_KWARGS["val"] = True
+VAL_INIT_KWARGS["trim_to_shortest"] = False
+VAL_INIT_KWARGS["batch_size"] = 1
+VAL_INIT_KWARGS["frames_per_batch"] =  FRAMES_PER_BATCH * BATCH_SIZE
 
+# testing padding XXX
 # VALS TO TEST
 SHORTEST_TOTAL_TIME = 59999982
 SEGMENT_N = SHORTEST_TOTAL_TIME // DELTA_T // FRAMES_PER_BATCH
 VAL_FILEPATHS = ['train_a/17-04-06_13-51-53_854500000_914500000_td.dat',
                  'train_a/17-04-14_15-49-57_1281500000_1341500000_td.dat']
+VAL_NUM_CLS = 2
+VAL_H_PADDED = H+128-H%128
+VAL_W_PADDED = W+128-W%128
+
 
 
 class TestCSVDataset(unittest.TestCase):
@@ -41,11 +51,25 @@ class TestCSVDataset(unittest.TestCase):
         self.assertEqual(dataset.segment_n, SEGMENT_N)
         self.assertEqual(dataset.event_names, [op.join(
             DATA_ROOT, val_filepath) for val_filepath in VAL_FILEPATHS])
+        self.assertEqual(dataset.hw,(H,W))
+        self.assertEqual(dataset.h,H)
+        self.assertEqual(dataset.w,W)
 
         no_trimming = copy.deepcopy(INIT_KWARGS)
         no_trimming["trim_to_shortest"] = False
         with self.assertRaises(NotImplementedError):
             dataset = CSVDataset(**no_trimming)
+
+        self.assertEqual(dataset.num_classes, VAL_NUM_CLS)
+        for key, value in dataset.classes.items():
+            self.assertEqual(dataset.labels[value],key)
+        for key, value in dataset.labels.items():
+            self.assertEqual(dataset.classes[value],key)
+
+        self.assertEqual(dataset.down_ratio,4)
+        self.assertEqual(dataset.max_objs,128)
+        self.assertEqual(dataset.padding,128)
+        self.assertEqual(dataset.gaussian_iou,0.7)
 
     def test_batch_size_1(self):
         batch_size = 1
@@ -185,4 +209,49 @@ class TestCSVDataset(unittest.TestCase):
             self.assertEqual(info['time_info']['delta_t'],batch['info'][sample_idx]['time_info']['delta_t'], msg=idx)
             for frame_idx in range(frames_per_batch):
                 self.assertEqual(info['time_info']['t0'][frame_idx],batch['info'][sample_idx]['time_info']['t0'][frame_idx], msg=f"{idx},{frame_idx}")
-            
+
+
+         
+    def test_padding(self):
+        batch_size = 2 
+        init_2 = copy.deepcopy(INIT_KWARGS)
+        init_2["pad"] = True
+        init_2['batch_size'] = batch_size
+        frames_per_batch = init_2['frames_per_batch']
+        delta_t = init_2['delta_t']
+        dataset = CSVDataset(**init_2)
+        # length
+        self.assertEqual(len(dataset), SEGMENT_N * len(VAL_FILEPATHS))
+        #b{batch_idx}{segment_idx}
+        b00 = dataset[0]
+        b10 = dataset[1]
+        b01 = dataset[2]
+        b11 = dataset[3]
+        b0_1 = dataset[len(dataset)-2]
+        b1_1 = dataset[len(dataset)-1]
+        bs = [b00, b10, b01, b11, b0_1, b1_1]
+        firsts = [True, True, False, False, False, False]
+        gens = [bs,firsts]
+        len_gens = [len(g) for g in gens]
+        assert len(set(len_gens)) == 1
+        for idx, (b, first) in enumerate(zip(*gens)):
+            event = b['event']
+            self.assertEqual(event.size(),torch.Size([frames_per_batch, BINS*2, VAL_H_PADDED, VAL_W_PADDED]), msg=idx)
+    
+    def test_val_init(self):
+        val_dataset = CSVDataset(**VAL_INIT_KWARGS)
+        incorrect1 = copy.deepcopy(VAL_INIT_KWARGS)
+        incorrect1["val"] = False
+        incorrect1["trim_to_shortest"] = True
+        incorrect1_val_dataset = CSVDataset(**incorrect1)
+        with self.assertRaises(ValueError):
+            incorrect1_val_dataset.run_eval(None)
+        incorrect2 = copy.deepcopy(VAL_INIT_KWARGS)
+        incorrect2["batch_size"] = 2
+        with self.assertRaises(ValueError):
+            CSVDataset(**incorrect2)
+        incorrect3 = copy.deepcopy(VAL_INIT_KWARGS)
+        incorrect3["val"] = False
+        with self.assertRaises(NotImplementedError):
+            CSVDataset(**incorrect3)
+        

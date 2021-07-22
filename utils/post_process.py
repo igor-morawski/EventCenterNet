@@ -36,9 +36,7 @@ def ctdet_decode(hmap, regs, w_h_, K=100):
 
   # if flip test
   if batch > 1:
-    hmap = (hmap[0:1] + flip_tensor(hmap[1:2])) / 2
-    w_h_ = (w_h_[0:1] + flip_tensor(w_h_[1:2])) / 2
-    regs = regs[0:1]
+    raise NotImplementedError
 
   batch = 1
 

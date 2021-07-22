@@ -1,13 +1,5 @@
 import numpy as np
 
-module_imports =  ['from {}prophesee.src.io.psee_loader import PSEELoader',
-    'from {}prophesee.src.io.box_loading import reformat_boxes']
-for module_import in module_imports:
-    try:
-        exec(module_import.format("."))
-    except ImportError: 
-        exec(module_import.format(""))
-
 import os.path as op
 import torch
 

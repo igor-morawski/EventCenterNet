@@ -1,6 +1,6 @@
 import numpy as np
-import cv2
 import random
+import cv2
 
 
 def flip(img):
@@ -20,6 +20,37 @@ def transform_preds(coords, center, scale, output_size):
     target_coords[p, 0:2] = affine_transform(coords[p, 0:2], trans)
   return target_coords
 
+
+def affine_transform(pt, t):
+  new_pt = np.array([pt[0], pt[1], 1.], dtype=np.float32).T
+  new_pt = np.dot(t, new_pt)
+  return new_pt[:2]
+
+
+def get_3rd_point(a, b):
+  direct = a - b
+  return b + np.array([-direct[1], direct[0]], dtype=np.float32)
+
+
+def get_dir(src_point, rot_rad):
+  _sin, _cos = np.sin(rot_rad), np.cos(rot_rad)
+
+  src_result = [0, 0]
+  src_result[0] = src_point[0] * _cos - src_point[1] * _sin
+  src_result[1] = src_point[0] * _sin + src_point[1] * _cos
+
+  return src_result
+
+
+def crop(img, center, scale, output_size, rot=0):
+  trans = get_affine_transform(center, scale, rot, output_size)
+
+  dst_img = cv2.warpAffine(img,
+                           trans,
+                           (int(output_size[0]), int(output_size[1])),
+                           flags=cv2.INTER_LINEAR)
+
+  return dst_img
 
 def get_affine_transform(center,
                          scale,
@@ -55,38 +86,6 @@ def get_affine_transform(center,
     trans = cv2.getAffineTransform(np.float32(src), np.float32(dst))
 
   return trans
-
-
-def affine_transform(pt, t):
-  new_pt = np.array([pt[0], pt[1], 1.], dtype=np.float32).T
-  new_pt = np.dot(t, new_pt)
-  return new_pt[:2]
-
-
-def get_3rd_point(a, b):
-  direct = a - b
-  return b + np.array([-direct[1], direct[0]], dtype=np.float32)
-
-
-def get_dir(src_point, rot_rad):
-  _sin, _cos = np.sin(rot_rad), np.cos(rot_rad)
-
-  src_result = [0, 0]
-  src_result[0] = src_point[0] * _cos - src_point[1] * _sin
-  src_result[1] = src_point[0] * _sin + src_point[1] * _cos
-
-  return src_result
-
-
-def crop(img, center, scale, output_size, rot=0):
-  trans = get_affine_transform(center, scale, rot, output_size)
-
-  dst_img = cv2.warpAffine(img,
-                           trans,
-                           (int(output_size[0]), int(output_size[1])),
-                           flags=cv2.INTER_LINEAR)
-
-  return dst_img
 
 
 def gaussian_radius(det_size, min_overlap=0.7):
