@@ -26,8 +26,11 @@ from utils.post_process import ctdet_decode
 
 from utils.dataloader import CSVDataset, collater
 
+COCO_STATS = ["AP.50:.95","AP@.50","AP@.75","AP_small","AP_medium","AP_large",
+              "AR_1","AR_10","AR_100","AR_100_small","AR_100_medium","AR_100_large",]
+STATS2SAVE = ["AP.50:.95","AP@.50","AP@.75","AR_1","AR_10","AR_100"]
 HW = (240, 304)
-PROPH_STRUCTURED_ARRAY = [('t', '<u8'), ('x', '<f4'), ('y', '<f4'), ('w', '<f4'), ('h', '<f4'), ('class_id', 'u1'), ('class_confidence', '<f4'), ('track_id', '<u4')]
+PROPH_STRUCTURED_ARRAY = [('ts', '<u8'), ('x', '<f4'), ('y', '<f4'), ('w', '<f4'), ('h', '<f4'), ('class_id', 'u1'), ('class_confidence', '<f4'), ('track_id', '<u4')]
 
 # Training settings
 parser = argparse.ArgumentParser(description='simple_centernet45')
@@ -203,8 +206,8 @@ def main():
       for inputs in tqdm.tqdm(val_loader):
         assert len(inputs["file_path"]) == 1
         event_file_path = inputs["file_path"][0]
-        if event_file_path in list(detections.keys()):
-          continue
+        if event_file_path in list(detections.keys()): # XXX
+          pass
         outputs = model(inputs['event'].to(cfg.device))
         outs, _ = outputs
         hmap_t, regs_t, w_h_t = zip(*outs)
@@ -229,7 +232,7 @@ def main():
           except KeyError:
             assert inputs["info"][frame_idx]["first_segment"]
             detections[event_file_path] = [dets]
-
+      
       proph_bboxes = {}
       for key in detections.keys():
         # n_dets = sum([len(d) for d in detections[key]])
@@ -249,9 +252,12 @@ def main():
             entries.append((t, x, y, w, h, class_id, class_confidence, track_id))
         proph_bboxes[key] = np.array(entries, dtype=PROPH_STRUCTURED_ARRAY)
     eval_results = val_dataset.run_eval(proph_bboxes)
+        
+    for val, name in zip(eval_results, COCO_STATS):
+      print(f"[VAL {epoch}]{name} : {val}")
+      if name in STATS2SAVE:
+        summary_writer.add_scalar(f'val_mAP/{name}', val, epoch)
     
-    print(eval_results)
-    summary_writer.add_scalar('val_mAP/mAP', eval_results[0], epoch)
   
   print('Starting training...')
   for epoch in range(1, cfg.num_epochs + 1):

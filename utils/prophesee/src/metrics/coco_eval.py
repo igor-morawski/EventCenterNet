@@ -30,8 +30,7 @@ def evaluate_detection(gt_boxes_list, dt_boxes_list, classes=("car", "pedestrian
     flattened_gt = []
     flattened_dt = []
     for gt_boxes, dt_boxes in zip(gt_boxes_list, dt_boxes_list):
-        
-        print(gt_boxes.dtype)
+
         assert np.all(gt_boxes['t'][1:] >= gt_boxes['t'][:-1])
         assert np.all(dt_boxes['t'][1:] >= dt_boxes['t'][:-1])
 
@@ -42,7 +41,7 @@ def evaluate_detection(gt_boxes_list, dt_boxes_list, classes=("car", "pedestrian
         flattened_gt = flattened_gt + gt_win
         flattened_dt = flattened_dt + dt_win
 
-    _coco_eval(flattened_gt, flattened_dt, height, width, labelmap=classes)
+    return _coco_eval(flattened_gt, flattened_dt, height, width, labelmap=classes)
 
 
 def _match_times(all_ts, gt_boxes, dt_boxes, time_tol):
@@ -93,19 +92,23 @@ def _coco_eval(gts, detections, height, width, labelmap=("car", "pedestrian")):
     """
     categories = [{"id": id + 1, "name": class_name, "supercategory": "none"}
                   for id, class_name in enumerate(labelmap)]
-
+    
     dataset, results = _to_coco_format(gts, detections, categories, height=height, width=width)
 
-    coco_gt = COCO()
-    coco_gt.dataset = dataset
-    coco_gt.createIndex()
-    coco_pred = coco_gt.loadRes(results)
+    if len(results):
+        coco_gt = COCO()
+        coco_gt.dataset = dataset
+        coco_gt.createIndex()
+        coco_pred = coco_gt.loadRes(results)
 
-    coco_eval = COCOeval(coco_gt, coco_pred, 'bbox')
-    coco_eval.params.imgIds = np.arange(1, len(gts) + 1, dtype=int)
-    coco_eval.evaluate()
-    coco_eval.accumulate()
-    coco_eval.summarize()
+        coco_eval = COCOeval(coco_gt, coco_pred, 'bbox')
+        coco_eval.params.imgIds = np.arange(1, len(gts) + 1, dtype=int)
+        coco_eval.evaluate()
+        coco_eval.accumulate()
+        coco_eval.summarize()
+        return coco_eval.stats
+    else:
+        return [-1]*12
 
 
 def _to_coco_format(gts, detections, categories, height=240, width=304):
