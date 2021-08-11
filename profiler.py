@@ -1,3 +1,6 @@
+import torch
+# https://pytorch.org/docs/1.1.0/autograd.html << profiler
+PROFILERS = []
 import os
 import sys
 import time
@@ -83,10 +86,6 @@ cfg.lr_step = [int(s) for s in cfg.lr_step.split(',')]
 
 
 def main():
-  saver = create_saver(cfg.local_rank, save_dir=cfg.ckpt_dir)
-  logger = create_logger(cfg.local_rank, save_dir=cfg.log_dir)
-  summary_writer = create_summary(cfg.local_rank, log_dir=cfg.log_dir)
-  print = logger.info
   print(cfg)
 
   torch.manual_seed(317)
@@ -101,39 +100,45 @@ def main():
                             world_size=num_gpus, rank=cfg.local_rank)
   else:
     cfg.device = torch.device('cuda')
+    print(f"Device cuda")
 
   print('Setting up data...')
-  if cfg.dataset == "CSVDataset":
-    Dataset = CSVDataset 
-    train_cfg = {"csv_file": cfg.train_csv_file, "class_list": cfg.class_list_file,
-               "batch_size": cfg.batch_size, "data_root": cfg.data_dir,
-               "trim_to_shortest": cfg.trim_to_shortest, "delta_t": cfg.delta_t, 
-               "frames_per_batch": cfg.frames_per_batch, "bins": cfg.bins, 
-               "hw" : HW}
-    val_cfg = copy.deepcopy(train_cfg)
-    val_cfg["csv_file"] = cfg.val_csv_file
-    val_cfg["val"] = True
-    val_cfg["trim_to_shortest"] = False
-    val_cfg["batch_size"] = 1
-    val_cfg["frames_per_batch"] = cfg.frames_per_batch * cfg.batch_size # XXX ?
-  else:
-    raise NotImplementedError
-  train_dataset = Dataset(**train_cfg)
-  # train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset,
-  #                                                                 num_replicas=num_gpus,
-  #                                                                 rank=cfg.local_rank)
-  # XXX
-  train_loader = torch.utils.data.DataLoader(train_dataset, collate_fn=collater, batch_size=train_cfg["batch_size"], shuffle=False)
+  with torch.autograd.profiler.emit_nvtx() as prof_datasets:
+    if cfg.dataset == "CSVDataset":
+        Dataset = CSVDataset 
+        train_cfg = {"csv_file": cfg.train_csv_file, "class_list": cfg.class_list_file,
+                "batch_size": cfg.batch_size, "data_root": cfg.data_dir,
+                "trim_to_shortest": cfg.trim_to_shortest, "delta_t": cfg.delta_t, 
+                "frames_per_batch": cfg.frames_per_batch, "bins": cfg.bins, 
+                "hw" : HW}
+        val_cfg = copy.deepcopy(train_cfg)
+        val_cfg["csv_file"] = cfg.val_csv_file
+        val_cfg["val"] = True
+        val_cfg["trim_to_shortest"] = False
+        val_cfg["batch_size"] = 1
+        val_cfg["frames_per_batch"] = cfg.frames_per_batch * cfg.batch_size # XXX ?
+    else:
+        raise NotImplementedError
+    train_dataset = Dataset(**train_cfg)
+    # train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset,
+    #                                                                 num_replicas=num_gpus,
+    #                                                                 rank=cfg.local_rank)
+    # XXX
+    train_loader = torch.utils.data.DataLoader(train_dataset, collate_fn=collater, batch_size=train_cfg["batch_size"], shuffle=False)
 
-  val_dataset = Dataset(**val_cfg)
-  val_loader = torch.utils.data.DataLoader(val_dataset, collate_fn=collater, batch_size=val_cfg["batch_size"], shuffle=False)
+    val_dataset = Dataset(**val_cfg)
+    val_loader = torch.utils.data.DataLoader(val_dataset, collate_fn=collater, batch_size=val_cfg["batch_size"], shuffle=False)
+  PROFILERS.append([prof_datasets, "prof_datasets"])
+
   print('Creating model...')
-  if 'hourglass' in cfg.arch:
-    model = get_hourglass(cfg.arch, cfg.bins*2, train_dataset.num_classes)
-  elif 'resdcn' in cfg.arch:
-    model = get_pose_net(num_layers=int(cfg.arch.split('_')[-1]), num_classes=train_dataset.num_classes)
-  else:
-    raise NotImplementedError
+  with torch.autograd.profiler.emit_nvtx() as prof_create_model:
+    if 'hourglass' in cfg.arch:
+      model = get_hourglass(cfg.arch, cfg.bins*2, train_dataset.num_classes)
+    elif 'resdcn' in cfg.arch:
+      model = get_pose_net(num_layers=int(cfg.arch.split('_')[-1]), num_classes=train_dataset.num_classes)
+    else:
+      raise NotImplementedError
+  PROFILERS.append([prof_create_model, "prof_create_model"])
 
   if cfg.dist:
     raise NotImplementedError
@@ -155,33 +160,43 @@ def main():
     print('\n Epoch: %d' % epoch)
     model.train()
     tic = time.perf_counter()
-    hiddens = None
+    with torch.autograd.profiler.emit_nvtx() as prof_loader:
+      for batch_idx, batch in enumerate(train_loader):
+        pass
+        break
+    PROFILERS.append([prof_loader, "prof_loader"])
+
     for batch_idx, batch in enumerate(train_loader):
       batch['event'] = batch['event'].to(device=cfg.device, non_blocking=True)
 
-      if any([s["first_segment"] for s in batch['info']]):
-        assert all([s["first_segment"] for s in batch['info']])
-        hiddens = None
-
-      outputs = model(batch['event'], hiddens)
+      with torch.autograd.profiler.emit_nvtx() as prof_inference:
+        outputs = model(batch['event'])
+      PROFILERS.append([prof_inference, "prof_inference"])
 
       outs, hiddens = outputs
-      assert len(hiddens) == 1
-      hiddens = hiddens[0]
       hmap, regs, w_h_ = zip(*outs)
-      
-      x = batch['hmap_t'].detach().cpu().numpy()
-      # print(x.shape) # XXX
-      # print(np.where(x[1] > 0)) # XXX
+      # [print(batch[key].size()) for key in ['event','inds_t', 'hmap_t', 'regs_t', 'w_h_t']]
+      # print([r.size() for r in regs])
+      # print([r.size() for r in hmap])
+      # print([r.size() for r in w_h_])
       batch['inds_t'] = batch['inds_t'].to(device=cfg.device, non_blocking=True)
-      regs = [_tranpose_and_gather_feature_t(r, batch['inds_t']) for r in regs]
-      w_h_ = [_tranpose_and_gather_feature_t(r, batch['inds_t']) for r in w_h_]
+      with torch.autograd.profiler.emit_nvtx() as prof_tranpose_and_gather_feature_t_regs:
+        regs = [_tranpose_and_gather_feature_t(r, batch['inds_t']) for r in regs]
+      PROFILERS.append([prof_tranpose_and_gather_feature_t_regs, "prof_tranpose_and_gather_feature_t_regs"])
 
-      print(any([b["debug"] for b in batch["info"]]))
+      with torch.autograd.profiler.emit_nvtx() as prof_tranpose_and_gather_feature_t_w_h_:
+        w_h_ = [_tranpose_and_gather_feature_t(r, batch['inds_t']) for r in w_h_]
+      PROFILERS.append([prof_tranpose_and_gather_feature_t_w_h_, "prof_tranpose_and_gather_feature_t_w_h_"])
 
-      hmap_loss = _neg_loss_t(hmap, batch['hmap_t'].to(device=cfg.device, non_blocking=True))
-      reg_loss = _reg_loss_t(regs, batch['regs_t'].to(device=cfg.device, non_blocking=True), batch['ind_masks_t'].to(device=cfg.device, non_blocking=True))
-      w_h_loss = _reg_loss_t(w_h_, batch['w_h_t'].to(device=cfg.device, non_blocking=True), batch['ind_masks_t'].to(device=cfg.device, non_blocking=True))
+      with torch.autograd.profiler.emit_nvtx() as prof_hmap_loss:
+        hmap_loss = _neg_loss_t(hmap, batch['hmap_t'].to(device=cfg.device, non_blocking=True))
+      PROFILERS.append([prof_hmap_loss, "prof_hmap_loss"])
+      with torch.autograd.profiler.emit_nvtx() as prof_reg_loss:
+        reg_loss = _reg_loss_t(regs, batch['regs_t'].to(device=cfg.device, non_blocking=True), batch['ind_masks_t'].to(device=cfg.device, non_blocking=True))
+      PROFILERS.append([prof_reg_loss, "prof_reg_loss"])
+      with torch.autograd.profiler.emit_nvtx() as prof_w_h_loss:
+        w_h_loss = _reg_loss_t(w_h_, batch['w_h_t'].to(device=cfg.device, non_blocking=True), batch['ind_masks_t'].to(device=cfg.device, non_blocking=True))
+      PROFILERS.append([prof_w_h_loss, "prof_w_h_loss"])
       loss = hmap_loss + 1 * reg_loss + 0.1 * w_h_loss
 
       optimizer.zero_grad()
@@ -197,10 +212,7 @@ def main():
               ' (%d samples/sec)' % (cfg.batch_size * cfg.log_interval / duration))
 
         step = len(train_loader) * epoch + batch_idx
-        summary_writer.add_scalar('hmap_loss', hmap_loss.item(), step)
-        summary_writer.add_scalar('reg_loss', reg_loss.item(), step)
-        summary_writer.add_scalar('w_h_loss', w_h_loss.item(), step)
-        summary_writer.add_scalar('total_loss', loss.item(), step)
+      break
     return
 
   def val_map(epoch):
@@ -210,7 +222,6 @@ def main():
     max_per_image = 100
 
     results = {}
-    hiddens = None
     with torch.no_grad():
       detections = {}
       for inputs in tqdm.tqdm(val_loader):
@@ -218,60 +229,60 @@ def main():
         event_file_path = inputs["file_path"][0]
         if event_file_path in list(detections.keys()): # XXX
           pass
-        if any([s["first_segment"] for s in inputs['info']]):
-          assert all([s["first_segment"] for s in inputs['info']])
-          hiddens = None
-        outputs = model(inputs['event'].to(cfg.device), hiddens)
-        outs, hiddens = outputs
-        assert len(hiddens) == 1
-        hiddens = hiddens[0]
+        outputs = model(inputs['event'].to(cfg.device))
+        outs, _ = outputs
         hmap_t, regs_t, w_h_t = zip(*outs)
-        for frame_idx, (hmap, regs, w_h_) in enumerate(zip(hmap_t[-1],regs_t[-1],w_h_t[-1])):
-          dets = ctdet_decode(hmap, regs, w_h_)
-          dets = dets.detach().cpu().numpy().reshape(1, -1, dets.shape[2])[0]
-          dets[:, :2] = transform_preds(dets[:, 0:2],
-                                        inputs['center'][0],
-                                        inputs['scale'][0],
-                                        (inputs['fmap_w'][0], inputs['fmap_h'][0]))
-          dets[:, 2:4] = transform_preds(dets[:, 2:4],
+        with torch.autograd.profiler.emit_nvtx() as prof_decode_val:
+          for frame_idx, (hmap, regs, w_h_) in enumerate(zip(hmap_t[-1],regs_t[-1],w_h_t[-1])):
+            dets = ctdet_decode(hmap, regs, w_h_)
+            dets = dets.detach().cpu().numpy().reshape(1, -1, dets.shape[2])[0]
+            dets[:, :2] = transform_preds(dets[:, 0:2],
                                           inputs['center'][0],
                                           inputs['scale'][0],
                                           (inputs['fmap_w'][0], inputs['fmap_h'][0]))
-          scores = dets[:, 4]
-          dets = dets[dets[:, 4].argsort()[::-1]]
-          scores = dets[:, 4]
-          if len(scores) > max_per_image:
-            dets = dets[:max_per_image]
-          try:  
-            detections[event_file_path].append(dets)
-          except KeyError:
-            assert inputs["info"][frame_idx]["first_segment"]
-            detections[event_file_path] = [dets]
-      
+            dets[:, 2:4] = transform_preds(dets[:, 2:4],
+                                            inputs['center'][0],
+                                            inputs['scale'][0],
+                                            (inputs['fmap_w'][0], inputs['fmap_h'][0]))
+            scores = dets[:, 4]
+            dets = dets[dets[:, 4].argsort()[::-1]]
+            scores = dets[:, 4]
+            if len(scores) > max_per_image:
+              dets = dets[:max_per_image]
+            try:  
+              detections[event_file_path].append(dets)
+            except KeyError:
+              assert inputs["info"][frame_idx]["first_segment"]
+              detections[event_file_path] = [dets]
+            break
+          PROFILERS.append([prof_decode_val, "prof_decode_val"])
       proph_bboxes = {}
-      for key in detections.keys():
-        # n_dets = sum([len(d) for d in detections[key]])
-        entries = []
-        for dets_idx, dets in enumerate(detections[key]):
-          t = dets_idx * val_dataset.delta_t
-          assert t == int(t)
-          t = int(t)
-          X = dets[:,0]
-          Y = dets[:,1]
-          W = dets[:,0] + dets[:,2]
-          H = dets[:,1] + dets[:,3]
-          Class_confidence = dets[:,4]
-          Class_id = dets[:,5]
-          track_id = 0
-          for x, y, w, h, class_id, class_confidence in zip(X, Y, W, H, Class_id, Class_confidence):
-            entries.append((t, x, y, w, h, class_id, class_confidence, track_id))
-        proph_bboxes[key] = np.array(entries, dtype=PROPH_STRUCTURED_ARRAY)
-    eval_results = val_dataset.run_eval(proph_bboxes)
+
+      with torch.autograd.profiler.emit_nvtx() as prof_cn2prophesee_style:          
+        for key in detections.keys():
+          # n_dets = sum([len(d) for d in detections[key]])
+          entries = []
+          for dets_idx, dets in enumerate(detections[key]):
+            t = dets_idx * val_dataset.delta_t
+            assert t == int(t)
+            t = int(t)
+            X = dets[:,0]
+            Y = dets[:,1]
+            W = dets[:,0] + dets[:,2]
+            H = dets[:,1] + dets[:,3]
+            Class_confidence = dets[:,4]
+            Class_id = dets[:,5]
+            track_id = 0
+            for x, y, w, h, class_id, class_confidence in zip(X, Y, W, H, Class_id, Class_confidence):
+              entries.append((t, x, y, w, h, class_id, class_confidence, track_id))
+          proph_bboxes[key] = np.array(entries, dtype=PROPH_STRUCTURED_ARRAY)
+      PROFILERS.append([prof_cn2prophesee_style, "prof_cn2prophesee_style"])
+      eval_results = val_dataset.run_eval(proph_bboxes)
         
     for val, name in zip(eval_results, COCO_STATS):
       print(f"[VAL {epoch}]{name} : {val}")
       if name in STATS2SAVE:
-        summary_writer.add_scalar(f'val_mAP/{name}', val, epoch)
+        pass
     
   
   print('Starting training...')
@@ -280,12 +291,14 @@ def main():
     train(epoch)
     if cfg.val_interval > 0 and epoch % cfg.val_interval == 0:
       val_map(epoch)
-    print(saver.save(model.module.state_dict(), f'checkpoint{epoch}'))
+    pass
     lr_scheduler.step(epoch)  # move to here after pytorch1.1.0
 
-  summary_writer.close()
-
+  pass
 
 if __name__ == '__main__':
   with DisablePrint(local_rank=cfg.local_rank):
     main()
+  for (prof, name) in PROFILERS:
+    print(name)
+    print(prof)

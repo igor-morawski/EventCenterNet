@@ -36,7 +36,8 @@ class ConvLSTMCell(nn.Module):
                               kernel_size=self.kernel_size,
                               padding=self.padding,
                               bias=self.bias)
-
+        self.relu = nn.ReLU(inplace=True)
+        
     def forward(self, input_tensor, cur_state):
         h_cur, c_cur = cur_state
 
@@ -50,7 +51,7 @@ class ConvLSTMCell(nn.Module):
         g = torch.tanh(cc_g)
 
         c_next = f * c_cur + i * g
-        h_next = o * torch.tanh(c_next)
+        h_next = o * self.relu(c_next)
 
         return h_next, c_next
 
@@ -143,7 +144,7 @@ class ConvLSTM(nn.Module):
         if hidden_state is not None:
             if self.num_layers > 1:
                 raise NotImplementedError()
-        else:
+        if hidden_state is None:
             # Since the init is done in forward. Can send image size here
             hidden_state = self._init_hidden(batch_size=b,
                                              image_size=(h, w))

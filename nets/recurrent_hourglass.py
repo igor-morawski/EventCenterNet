@@ -65,9 +65,39 @@ def make_layer_revr(kernel_size, inp_dim, out_dim, modules, layer):
   layers.append(layer(kernel_size, inp_dim, out_dim))
   return nn.Sequential(*layers)
 
+class convolution(nn.Module):
+  def __init__(self, k, inp_dim, out_dim, stride=1, with_bn=True):
+    super(convolution, self).__init__()
+    pad = (k - 1) // 2
+    self.conv = nn.Conv2d(inp_dim, out_dim, (k, k), padding=(pad, pad), stride=(stride, stride), bias=not with_bn)
+    self.bn = nn.BatchNorm2d(out_dim) if with_bn else nn.Sequential()
+    self.relu = nn.ReLU(inplace=True)
 
-def make_kp_layer(input_dim, hidden_dim):
-  return ConvLSTM(input_dim, hidden_dim, (3,3), 1, True, True, False)
+  def forward(self, x):
+    conv = self.conv(x)
+    bn = self.bn(conv)
+    relu = self.relu(bn)
+    return relu
+
+
+class Head(nn.Module):
+  def __init__(self, cnv_dim, curr_dim, out_dim):
+    super(Head, self).__init__()
+    self.convlstm = ConvLSTM(cnv_dim, curr_dim, (3,3), 1, True, True, False)
+    self.conv = nn.Conv2d(curr_dim, out_dim, (1, 1))
+    
+  def forward(self, x, hidden=None):
+    x, hidden = self.convlstm(x, hidden)
+    B, T, C, H, W = x.size()
+    x = x.reshape(-1, C, H, W)
+    x = self.conv(x)
+    _, C, H, W = x.size()
+    x = x.reshape(B, T, C, H, W)
+    return x, hidden
+
+def make_kp_layer(cnv_dim, curr_dim, out_dim):
+  return Head(cnv_dim, curr_dim, out_dim)
+  # return ConvLSTM(input_dim, hidden_dim, (3,3), 1, True, True, False)
 
 class kp_module(nn.Module):
   def __init__(self, n, dims, modules):
@@ -130,26 +160,29 @@ class exkp(nn.Module):
                                               nn.BatchNorm2d(curr_dim))
                                 for _ in range(nstack - 1)])
     # heatmap layers
-    self.hmap = nn.ModuleList([make_kp_layer(cnv_dim, num_classes) for _ in range(nstack)])
+    self.hmap = nn.ModuleList([make_kp_layer(cnv_dim, curr_dim, num_classes) for _ in range(nstack)])
     # for hmap in self.hmap:
     #   hmap[-1].bias.data.fill_(-2.19)
 
     # regression layers
-    self.regs = nn.ModuleList([make_kp_layer(cnv_dim, 2) for _ in range(nstack)])
-    self.w_h_ = nn.ModuleList([make_kp_layer(cnv_dim, 2) for _ in range(nstack)])
+    self.regs = nn.ModuleList([make_kp_layer(cnv_dim, curr_dim, 2) for _ in range(nstack)])
+    self.w_h_ = nn.ModuleList([make_kp_layer(cnv_dim, curr_dim, 2) for _ in range(nstack)])
 
     self.relu = nn.ReLU(inplace=True)
 
   def forward(self, x, hidden_states=None):
-    if hidden_states:
-      raise NotImplementedError
     B, T, C, H, W = x.size()
-    # x = torch.transpose(x, 0, 1) # T, B, C, H, W
     x = x.reshape(-1, C, H, W)
     inter = self.pre(x)
     
     outs = []
     hiddens = []
+    
+    if hidden_states:
+      prev_hmap_hidden, prev_regs_hidden, prev_w_h_hidden = hidden_states
+    else:
+      prev_hmap_hidden, prev_regs_hidden, prev_w_h_hidden = None, None, None
+
     for ind in range(self.nstack):
       kp = self.kps[ind](inter)
       cnv = self.cnvs[ind](kp)
@@ -157,9 +190,9 @@ class exkp(nn.Module):
       if self.training or ind == self.nstack - 1:
         _, cnv_c, cnv_h, cnv_w = cnv.size()
         bt_cnv = cnv.reshape(B, T, cnv_c, cnv_h, cnv_w)
-        hmap_out, hmap_hidden = self.hmap[ind](bt_cnv, hidden_states)
-        regs_out, regs_hiddden = self.regs[ind](bt_cnv, hidden_states)
-        w_h_out, w_h_hidden = self.w_h_[ind](bt_cnv, hidden_states)
+        hmap_out, hmap_hidden = self.hmap[ind](bt_cnv, prev_hmap_hidden)
+        regs_out, regs_hiddden = self.regs[ind](bt_cnv, prev_regs_hidden)
+        w_h_out, w_h_hidden = self.w_h_[ind](bt_cnv, prev_w_h_hidden)
         outs.append([hmap_out.transpose(0,1), regs_out.transpose(0,1), w_h_out.transpose(0,1)])
         hiddens.append([hmap_hidden, regs_hiddden, w_h_hidden])
 

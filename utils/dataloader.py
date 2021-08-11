@@ -3,16 +3,18 @@ import csv
 import os.path as op
 
 import math
+from utils.losses import _reg_loss
 import numpy as np
 import torch
 
 from torch.utils.data import Dataset
-from utils.image import draw_umich_gaussian, gaussian_radius
+from utils.image import draw_umich_gaussian, gaussian_radius, get_affine_transform, affine_transform
 try:
     from . import events as ev
 except ImportError:
     import events as ev
 
+import cv2 # XXX debug
 
 module_imports = ['from {}prophesee.src.io.psee_loader import PSEELoader as PSEELoader',
                   'from {}prophesee.src.metrics.coco_eval import evaluate_detection as evaluate_detection',
@@ -124,13 +126,10 @@ class CSVDataset(Dataset):
         self.padding = 128
         self.pad_h = self.padding - (self.h % self.padding)
         self.pad_w = self.padding - (self.w % self.padding)
-        if self.pad:
-            self.fmap_size = {"h": (self.h + self.pad_h) // self.down_ratio,
-                              "w": (self.w + self.pad_w) // self.down_ratio}
-        else:
-            self.fmap_size = {"h": self.h // self.down_ratio,
-                              "w": self.w // self.down_ratio}
-
+        self.fmap_size = {"h": self.h // self.down_ratio,
+                            "w": self.w // self.down_ratio}
+        self.padded_fmap_size = {"h": (self.h + self.pad_h) // self.down_ratio,
+                            "w": (self.w + self.pad_w) // self.down_ratio}
         self.gaussian_iou = 0.7
 
     def _parse(self, value, function, fmt):
@@ -204,11 +203,12 @@ class CSVDataset(Dataset):
         height, width = event.size()[-2:]
         assert self.h == height
         assert self.w == width
-        if self.pad:
-            event = torch.nn.functional.pad(
-                event, (0, self.pad_w, 0, self.pad_h))  # XXX before or after? fmap?
         center = np.array([width / 2., height / 2.], dtype=np.float32)
         scale = max(height, width) * 1.0
+        trans_fmap = get_affine_transform(center, scale, 0, [self.fmap_size['w'], self.fmap_size['h']])
+        if self.pad:
+            event = torch.nn.functional.pad(
+                event, (0, self.pad_w, 0, self.pad_h)) 
 
         bboxes_t, labels_t = zip(*[(a[:, 0:4], a[:, 4]) for a in annot])
         hmap_t = []
@@ -216,15 +216,23 @@ class CSVDataset(Dataset):
         regs_t = []
         inds_t = []
         ind_masks_t = []
+        lengths = self.fmap_size
+        if self.pad:
+            lengths = self.padded_fmap_size
         for t, (bboxes, labels) in enumerate(zip(bboxes_t, labels_t)):
-            hmap = np.zeros(
-                (self.num_classes, self.fmap_size["h"], self.fmap_size["w"]), dtype=np.float32)  # heatmap
+            hmap =  np.zeros(
+                (self.num_classes, self.padded_fmap_size["h"], self.padded_fmap_size["w"]), dtype=np.float32)  # heatmap
             # width and height
             w_h_ = np.zeros((self.max_objs, 2), dtype=np.float32)
             regs = np.zeros((self.max_objs, 2), dtype=np.float32)  # regression
             inds = np.zeros((self.max_objs,), dtype=np.int64)
             ind_masks = np.zeros((self.max_objs,), dtype=np.uint8)
+            # filled=False # XXX
             for k, (bbox, label) in enumerate(zip(bboxes, labels)):
+                # break # XXX DEBUG
+                # filled = True
+                bbox[:2] = affine_transform(bbox[:2], trans_fmap)
+                bbox[2:] = affine_transform(bbox[2:], trans_fmap)
                 bbox[[0, 2]] = np.clip(
                     bbox[[0, 2]], 0, self.fmap_size["w"] - 1)
                 bbox[[1, 3]] = np.clip(
@@ -234,22 +242,31 @@ class CSVDataset(Dataset):
                     obj_c = np.array(
                         [(bbox[0] + bbox[2]) / 2, (bbox[1] + bbox[3]) / 2], dtype=np.float32)
                     obj_c_int = obj_c.astype(np.int32)
-
                     assert int(label) == label  # sanity
                     radius = max(0, int(gaussian_radius(
                         (math.ceil(h), math.ceil(w)), self.gaussian_iou)))
                     draw_umich_gaussian(hmap[int(label)], obj_c_int, radius)
                     w_h_[k] = 1. * w, 1. * h
                     regs[k] = obj_c - obj_c_int  # discretization error
-                    inds[k] = obj_c_int[1] * self.fmap_size["w"] + obj_c_int[0]
+                    inds[k] = obj_c_int[1] * lengths["w"] + obj_c_int[0] 
                     ind_masks[k] = 1
+            # if filled: # XXX
+                # print(bbox)
+                # print(np.where(hmap > 0))
+                # print(w_h_[0])
+                # print(regs[0])
+                # print("po ")
+                # inv_tr = get_affine_transform(center, scale, 0, [self.fmap_size['w'], self.fmap_size['h']], inv=True)
+                # print(affine_transform(bbox, inv_tr))
+                # exit()
+                # pass
             hmap_t.append(hmap)
             w_h_t.append(w_h_)
             regs_t.append(regs)
             inds_t.append(inds)
             ind_masks_t.append(ind_masks)
         info = {"first_segment": first_segment, "last_segment": last_segment,
-                "time_info": event_time_info}  # XXX
+                "time_info": event_time_info, "debug":[any([len(b) for b in bboxes]), bboxes]}  # XXX
         file_path = self.event_names[file_idx]
         sample = {"event": event, "annot": annot, "info": info, "file_path": file_path,
                   "hmap_t": hmap_t, "w_h_t": w_h_t, "regs_t": regs_t, "inds_t": inds_t, "ind_masks_t": ind_masks_t,
@@ -290,6 +307,7 @@ class CSVDataset(Dataset):
             if return_time_info:
                 time_info["t0"].append(t0)
             for bbox_info in ev.video_segment_anno_to_bboxes(anno, t0, self.delta_t):
+                # break # XXX DEBUG 
                 x, y, w, h, class_id = bbox_info["x"], bbox_info["y"], bbox_info["w"], bbox_info["h"], bbox_info["class_id"]
                 annotation = np.zeros((1, 5))
                 x1 = x

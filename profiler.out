@@ -1,0 +1,542 @@
+Namespace(arch='small_hourglass', batch_size=2, bins=5, ckpt_dir='./ckpt/test', class_list_file='/tmp2/igor/EV/EventCenterNet/datasets/classes.csv', data_dir='/tmp2/igor/EV/Dataset/Automotive/', dataset='CSVDataset', delta_t=50000, dist=False, frames_per_batch=5, img_h=240, img_w=304, local_rank=0, log_dir='./logs/test', log_interval=1, log_name='test', lr=0.0005, lr_step=[90, 120], num_epochs=1, num_workers=2, pretrain_dir='./ckpt/pretrain/checkpoint.t7', pretrain_name='pretrain', root_dir='./', split_ratio=1.0, train_csv_file='/tmp2/igor/EV/EventCenterNet/tests/train_a.csv', trim_to_shortest=True, val_csv_file='/tmp2/igor/EV/EventCenterNet/tests/val_a.csv', val_interval=1)
+Device cuda
+Setting up data...
+Creating model...
+Starting training...
+
+ Epoch: 1
+[1/1-0/239]  hmap_loss= 17999.22070 reg_loss= 0.04119 w_h_loss= 15.02144 total_loss = 18000.76367 (0 samples/sec)
+
+ Val@Epoch: 1
+There are 2 GT bboxes and 2 PRED bboxes
+creating index...
+index created!
+Loading and preparing results...
+DONE (t=0.00s)
+creating index...
+index created!
+Running per image evaluation...
+Evaluate annotation type *bbox*
+DONE (t=0.10s).
+Accumulating evaluation results...
+DONE (t=0.02s).
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.000
+ Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets=100 ] = 0.000
+ Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets=100 ] = 0.000
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = -1.000
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.000
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.000
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=  1 ] = 0.000
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets= 10 ] = 0.000
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.000
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = -1.000
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.000
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.000
+[VAL 1]AP.50:.95 : 0.0
+[VAL 1]AP@.50 : 0.0
+[VAL 1]AP@.75 : 0.0
+[VAL 1]AP_small : -1.0
+[VAL 1]AP_medium : 0.0
+[VAL 1]AP_large : 0.0
+[VAL 1]AR_1 : 0.0
+[VAL 1]AR_10 : 0.0
+[VAL 1]AR_100 : 0.0
+[VAL 1]AR_100_small : -1.0
+[VAL 1]AR_100_medium : 0.0
+[VAL 1]AR_100_large : 0.0
+prof_datasets
+<torch.autograd.profiler.emit_nvtx object at 0x7fc6731164d0>
+prof_create_model
+<torch.autograd.profiler.emit_nvtx object at 0x7fc67311a890>
+prof_loader
+<torch.autograd.profiler.emit_nvtx object at 0x7fc67311a690>
+prof_inference
+<torch.autograd.profiler.emit_nvtx object at 0x7fc6733ab690>
+prof_tranpose_and_gather_feature_t_regs
+<torch.autograd.profiler.emit_nvtx object at 0x7fc671e0cdd0>
+prof_tranpose_and_gather_feature_t_w_h_
+<torch.autograd.profiler.emit_nvtx object at 0x7fc671e0ce50>
+prof_hmap_loss
+<torch.autograd.profiler.emit_nvtx object at 0x7fc671e0cc10>
+prof_reg_loss
+<torch.autograd.profiler.emit_nvtx object at 0x7fc67395cd10>
+prof_w_h_loss
+<torch.autograd.profiler.emit_nvtx object at 0x7fc673492710>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670577310>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670577850>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc673518c50>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670577c50>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670577f90>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670577bd0>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670577490>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc671e0cfd0>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670577110>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670577e90>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670577650>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670577990>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670577950>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670577b50>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670577fd0>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670577690>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670578d50>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670578350>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc6705785d0>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc6705779d0>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670578910>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670578f90>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670578190>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670578f10>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670578450>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670578210>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670578a50>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670576650>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670578610>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670576f50>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670576850>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670576450>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc671da9510>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc673a74510>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc673629c10>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc6705769d0>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670576dd0>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670576390>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670576290>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670562590>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670576bd0>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670576a90>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670576d50>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc6705765d0>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670576b90>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670576c50>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670576750>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc67056cf90>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc67056ced0>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670578050>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc67056cf50>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670578990>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc67056cf10>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670577150>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc6705781d0>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670578090>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670578a90>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670578250>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670578110>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc6733ab610>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc6705783d0>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670578d90>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670578c10>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670576c10>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670578b10>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670578c90>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc6705768d0>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670578cd0>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670576fd0>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670577cd0>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670577890>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc6705770d0>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670577b10>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc6705771d0>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670577c10>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc6705774d0>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670580250>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670580290>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670580650>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670580e90>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670580bd0>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc6705803d0>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670580790>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc6705808d0>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc6705846d0>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc6705841d0>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670584c90>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670580fd0>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670580110>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670580710>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670576550>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670580850>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc67056cfd0>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670578b90>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670580a50>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670576d90>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670578ed0>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc6705800d0>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc6705804d0>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670578e10>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670577590>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670577a90>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670577c90>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670578bd0>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670577b90>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670577410>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670584610>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670584410>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670584850>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670584c50>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc6705849d0>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670584890>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670584550>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670586110>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670586790>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670586c50>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670586b50>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670586d10>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc6705863d0>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670578650>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670576590>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc6705762d0>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670578490>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc6705787d0>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670577210>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc6705801d0>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670580ed0>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670578550>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670580f50>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670580490>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670580890>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670584790>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670584650>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670584510>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc6705840d0>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc6705868d0>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670586d50>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670584110>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670586150>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670584690>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670586850>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670586590>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670582e50>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670582e10>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670582d10>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670582350>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670582110>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc6705829d0>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670582610>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670582f50>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670582390>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc67058aad0>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc67058a890>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc67058a190>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc6705820d0>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670582ad0>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670582890>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670577d90>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670580dd0>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670577050>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670576610>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670584090>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670582810>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670580d10>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670584390>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc6705826d0>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670586a50>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc6705864d0>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc6705866d0>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670580c50>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670586650>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670582a90>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc67058a9d0>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc67058a750>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc67058a850>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc67058acd0>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc67058aa50>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc67058ac50>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc67058ac10>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc6705059d0>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670505310>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670505110>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670505cd0>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670505690>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670505850>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670505c10>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670505210>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670580910>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670584590>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670584ad0>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670586ed0>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670586d90>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670586290>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670582f90>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670582410>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670582910>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670582f10>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc67058a2d0>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc67058ae50>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc67058a7d0>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670580b50>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc67058a3d0>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670505f50>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670505250>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc67058aa90>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670505c50>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670505810>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670505990>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670505710>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc67050e0d0>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc67050eb50>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc67050e2d0>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc67050ed50>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc67050e410>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc67050ea10>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc67050ed90>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc67050cb10>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc67050e4d0>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc67050c950>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc67050c390>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc67050c790>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc67050ee50>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670577e50>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc67050edd0>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc6705860d0>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670582310>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670584990>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc67050ecd0>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670505c90>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc67058a4d0>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670582550>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc67050eed0>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670505290>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670505f10>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc67050e110>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc67058ad50>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc6705056d0>
+prof_decode_val
+<torch.autograd.profiler.emit_nvtx object at 0x7fc670505090>
+prof_cn2prophesee_style
+<torch.autograd.profiler.emit_nvtx object at 0x7fc673492310>
